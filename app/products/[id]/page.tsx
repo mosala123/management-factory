@@ -130,7 +130,12 @@ export default function ProductDetailsPage() {
     const result = await addToCart(product, quantity);
     
     if (result.error) {
-      if (result.error.includes("تسجيل الدخول")) {
+      const errorMessage =
+        typeof result.error === "string"
+          ? result.error
+          : result.error.message || "حدث خطأ غير متوقع";
+
+      if (errorMessage.includes("تسجيل الدخول")) {
         toast.error("✋ يجب تسجيل الدخول أولاً", {
           duration: 4000,
           icon: "🔐",

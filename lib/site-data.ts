@@ -1,5 +1,5 @@
 // lib/site-data.ts
-import { Category, CategoryItem, FAQ } from "./types";
+import type { Category, CategoryItem, FAQ } from "@/app/types";
 
 // Categories for Filtering - ثابتة
 export const categories: CategoryItem[] = [
