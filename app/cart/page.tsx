@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { resolveUserRole } from "@/lib/auth-role";
 import { formatCurrency } from "@/lib/site-data";
 import { getCart, updateCartItemQuantity, removeFromCart, clearCart, submitOrder } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +18,8 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [canViewCart, setCanViewCart] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
     email: "",
@@ -33,28 +36,61 @@ export default function CartPage() {
     setIsLoading(false);
   };
 
+  // جلب منتجات مميزة للسلة الفارغة
   useEffect(() => {
-    loadCart();
-    // جلب بيانات المستخدم لتعبئة النموذج تلقائياً
-    const getUserInfo = async () => {
+    const fetchFeaturedProducts = async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("*")
+        .limit(4);
+      
+      if (data) setFeaturedProducts(data);
+    };
+    fetchFeaturedProducts();
+  }, [supabase]);
+
+  useEffect(() => {
+    const initializeCartPage = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+
       if (user) {
-        // جلب اسم المستخدم من جدول profiles
         const { data: profile } = await supabase
           .from("profiles")
-          .select("name")
+          .select("name, role")
           .eq("id", user.id)
           .single();
-        
+
+        const userRole = resolveUserRole(user.email, profile?.role);
+        if (userRole === "admin") {
+          toast.error("صفحة السلة متاحة للعملاء فقط");
+          router.replace("/dashboard");
+          return;
+        }
+
         setCustomerInfo(prev => ({
           ...prev,
           email: user.email || "",
           name: profile?.name || "",
         }));
       }
+
+      setCanViewCart(true);
+      await loadCart();
     };
-    getUserInfo();
-  }, [supabase]);
+
+    initializeCartPage();
+  }, [router, supabase]);
+
+  if (!canViewCart && isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">جاري التحقق من صلاحية الوصول...</p>
+        </div>
+      </div>
+    );
+  }
 
   // تحديث الكمية
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
@@ -117,26 +153,129 @@ export default function CartPage() {
     );
   }
 
+  // صفحة السلة الفارغة - تصميم محسن
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen py-20">
-        <div className="container-custom mx-auto text-center">
-          <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+      <div className="min-h-screen bg-gray-50 py-16">
+        <div className="container-custom mx-auto">
+          {/* Hero Empty Cart */}
+          <div className="text-center mb-12">
+            <div className="relative inline-block">
+              <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-16 h-16 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="absolute -top-2 -right-2 animate-bounce">
+                <span className="text-2xl">🛒</span>
+              </div>
+            </div>
+            <h1 className="text-3xl font-black text-secondary mb-3">سلة التسوق فارغة</h1>
+            <p className="text-gray-500 max-w-md mx-auto mb-8">
+              يبدو أنك لم تقم بإضافة أي منتجات إلى السلة بعد. استعرض منتجاتنا واختر ما يناسبك.
+            </p>
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-all hover:shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                استعرض المنتجات
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 px-8 py-3 rounded-xl font-semibold hover:border-primary hover:text-primary transition-all"
+              >
+                طلب عرض سعر مخصص
+              </Link>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-secondary mb-3">السلة فارغة</h1>
-          <p className="text-gray-500 mb-6">لم تقم بإضافة أي منتجات إلى السلة بعد</p>
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            تصفح المنتجات
-          </Link>
+
+          {/* منتجات مقترحة */}
+          {featuredProducts.length > 0 && (
+            <div className="mt-16">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-black text-secondary">قد يعجبك أيضاً</h2>
+                <p className="text-gray-500 mt-1">اكتشف منتجاتنا الأكثر مبيعاً</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {featuredProducts.map((product) => (
+                  <Link
+                    key={product.id}
+                    href={`/products/${product.slug}`}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 hover:-translate-y-2"
+                  >
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={product.hero_image}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      {product.badge && (
+                        <span className="absolute top-3 right-3 bg-primary text-white text-xs px-2 py-1 rounded-full">
+                          {product.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-secondary mb-1 line-clamp-1">{product.name}</h3>
+                      <p className="text-gray-500 text-sm line-clamp-2 mb-2">{product.summary}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-primary font-bold">{formatCurrency(product.price)}</span>
+                        <span className="text-xs text-primary/70">عرض التفاصيل →</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="text-center mt-8">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center gap-1 text-primary font-semibold hover:gap-2 transition-all"
+                >
+                  عرض جميع المنتجات
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* روابط مساعدة */}
+          <div className="mt-16 pt-8 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="p-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-secondary mb-1">جودة مضمونة</h3>
+                <p className="text-sm text-gray-500">جميع منتجاتنا مطابقة لأعلى معايير الجودة</p>
+              </div>
+              <div className="p-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-secondary mb-1">توصيل سريع</h3>
+                <p className="text-sm text-gray-500">شحن لجميع المحافظات في أسرع وقت</p>
+              </div>
+              <div className="p-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-secondary mb-1">دعم فني</h3>
+                <p className="text-sm text-gray-500">فريق متخصص للرد على استفساراتك</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

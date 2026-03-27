@@ -27,7 +27,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gradient-to-br from-secondary via-secondary-dark to-gray-900 text-white mt-auto">
+    <footer className="bg-gradient-to-b from-black to-gray-900 text-white mt-auto">
       {/* القسم الرئيسي */}
       <div className="container-custom mx-auto py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
