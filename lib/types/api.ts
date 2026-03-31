@@ -13,3 +13,20 @@ export interface UpdateProductRequest {
     category?: string;
     image_url?: string;
 }
+
+// ✅ أضف الـ interface دي الجديدة
+export interface CreateProductRequest {
+    name: string;
+    slug: string;
+    description: string;
+    category: string;
+    price: number;
+    quantity: number;
+    min_stock: number;
+    sku: string;
+    cost?: number;
+    images?: string[];
+    summary?: string;
+    specs?: Record<string, unknown>;
+    tags?: string[];
+}
