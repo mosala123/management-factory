@@ -1,14 +1,11 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "./components/Navbar";
-import { Footer } from "./components/Footer";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "مصنع الإبداع للملابس | تصنيع ملابس ويونيفورم بجودة احترافية",
-  description:
-    "مصنع متخصص في تصنيع الملابس الرجالي والحريمي والأطفال واليونيفورم. نقدم خدمة تصنيع عينات أولية خلال 72 ساعة، إنتاج كميات صغيرة وكبيرة، مع تشطيب ثابت وجودة مضمونة.",
+  title:"نظام متكامل لإدارة المخزون والمنتجات في مصنع الإبداع للملابس"   ,
+  description: "مصنع الإبداع للملابس | نظام إدارة المصنع"  ,
 };
 
 export default function RootLayout({
@@ -24,9 +21,7 @@ export default function RootLayout({
           <div className="absolute bottom-0 -left-64 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse delay-1000" />
         </div>
         <div className="relative z-10 flex flex-col min-h-screen">
-          <Navbar />
           <main className="flex-1">{children}</main>
-          <Footer />
         </div>
         <Toaster
           position="top-center"
@@ -47,19 +42,11 @@ export default function RootLayout({
                 background: "#10b981",
                 color: "#fff",
               },
-              iconTheme: {
-                primary: "#fff",
-                secondary: "#10b981",
-              },
             },
             error: {
               style: {
                 background: "#ef4444",
                 color: "#fff",
-              },
-              iconTheme: {
-                primary: "#fff",
-                secondary: "#ef4444",
               },
             },
           }}

@@ -34,41 +34,23 @@ export default function NotFound() {
         {/* Actions */}
         <div className="flex flex-wrap justify-center gap-4">
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            العودة للرئيسية
+            العودة للوحة التحكم
           </Link>
           <Link
-            href="/products"
+            href="/login"
             className="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:border-primary hover:text-primary transition-all duration-300"
           >
-            تصفح المنتجات
+            تسجيل الدخول
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
-        </div>
-
-        {/* Suggested Links */}
-        <div className="mt-12 pt-8 border-t border-gray-100">
-          <p className="text-gray-400 text-sm mb-4">روابط مفيدة</p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href="/about" className="text-gray-500 hover:text-primary transition-colors">
-              عن المصنع
-            </Link>
-            <span className="text-gray-300">•</span>
-            <Link href="/contact" className="text-gray-500 hover:text-primary transition-colors">
-              اتصل بنا
-            </Link>
-            <span className="text-gray-300">•</span>
-            <Link href="/privacy" className="text-gray-500 hover:text-primary transition-colors">
-              سياسة الخصوصية
-            </Link>
-          </div>
         </div>
       </div>
     </div>

@@ -1,315 +1,267 @@
-// app/(admin)/dashboard/page.tsx
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import Link from 'next/link';
+import { useEffect, useMemo } from 'react';
+import { useProducts } from '@/hooks/useProducts';
+import {
+  buildActivityFeed,
+  buildInventoryReport,
+  type ProductLike,
+} from '@/lib/reporting';
+import { formatCurrency, getCategoryLabel } from '@/lib/utils';
 
 export default function AdminDashboard() {
-  const supabase = createClient();
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    pendingOrders: 0,
-    readyOrders: 0,
-    deliveredOrders: 0,
-    totalProducts: 0,
-    totalMessages: 0,
-    unreadMessages: 0,
-  });
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { products, isLoading, fetchProducts } = useProducts();
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    fetchProducts(1, 1000);
+  }, [fetchProducts]);
 
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
-
-    // جلب المنتجات
-    const { data: products, count: productsCount } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true });
-
-    // جلب الطلبات
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    // جلب الطلبات الكاملة للإحصائيات
-    const { data: allOrders } = await supabase
-      .from("orders")
-      .select("*");
-
-    // جلب الرسائل
-    const { count: messagesCount } = await supabase
-      .from("contacts")
-      .select("*", { count: "exact", head: true });
-
-    const { count: unreadCount } = await supabase
-      .from("contacts")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "new");
-
-    if (allOrders) {
-      const pending = allOrders.filter((o) => o.status === "قيد التنفيذ").length;
-      const ready = allOrders.filter((o) => o.status === "جاهز للشحن").length;
-      const delivered = allOrders.filter((o) => o.status === "تم التسليم").length;
-
-      setStats({
-        totalOrders: allOrders.length,
-        pendingOrders: pending,
-        readyOrders: ready,
-        deliveredOrders: delivered,
-        totalProducts: productsCount || 0,
-        totalMessages: messagesCount || 0,
-        unreadMessages: unreadCount || 0,
-      });
-      setRecentOrders(orders || []);
-    }
-
-    setIsLoading(false);
-  };
-
-  // حالة الطلب بالعربية مع الألوان
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { color: string; label: string; bgColor: string }> = {
-      "قيد التنفيذ": { color: "text-amber-800", bgColor: "bg-amber-50", label: "قيد التنفيذ" },
-      "جاهز للشحن": { color: "text-sky-800", bgColor: "bg-sky-50", label: "جاهز للشحن" },
-      "تم التسليم": { color: "text-emerald-800", bgColor: "bg-emerald-50", label: "تم التسليم" },
-      "ملغي": { color: "text-red-800", bgColor: "bg-red-50", label: "ملغي" },
-    };
-    return statusConfig[status] || { color: "text-gray-800", bgColor: "bg-gray-50", label: status };
-  };
-
-  // بطاقات الإحصائيات
-  const statCards = [
-    { title: "إجمالي الطلبات", value: stats.totalOrders, icon: "📦", color: "from-blue-500 to-blue-600", delay: 0 },
-    { title: "قيد التنفيذ", value: stats.pendingOrders, icon: "⚙️", color: "from-amber-500 to-amber-600", delay: 1 },
-    { title: "جاهز للشحن", value: stats.readyOrders, icon: "🚚", color: "from-sky-500 to-sky-600", delay: 2 },
-    { title: "تم التسليم", value: stats.deliveredOrders, icon: "✅", color: "from-emerald-500 to-emerald-600", delay: 3 },
-    { title: "المنتجات", value: stats.totalProducts, icon: "👕", color: "from-primary to-primary-dark", delay: 4 },
-    { title: "الرسائل", value: stats.totalMessages, icon: "💬", color: "from-purple-500 to-purple-600", delay: 5 },
-  ];
+  const report = useMemo(
+    () => buildInventoryReport(products as ProductLike[]),
+    [products]
+  );
+  const activityFeed = useMemo(() => buildActivityFeed(report), [report]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">جاري تحميل البيانات...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+          <p className="text-gray-500">جاري تحميل لوحة المصنع...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 lg:space-y-8 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-      {/* Header */}
-      <div className="animate-fade-in">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-secondary">
-          مرحباً بك في لوحة التحكم
-        </h1>
-        <p className="text-sm sm:text-base text-gray-500 mt-1">
-          نظرة عامة على نشاط المتجر وإحصائياته
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6">
-        {statCards.map((card, index) => (
-          <div
-            key={card.title}
-            className={`bg-gradient-to-br ${card.color} rounded-xl sm:rounded-2xl p-4 sm:p-5 text-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 animate-slide-up`}
-            style={{ animationDelay: `${card.delay * 0.1}s` }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-2xl sm:text-3xl">{card.icon}</span>
-              <span className="text-xl sm:text-2xl lg:text-3xl font-black">{card.value}</span>
-            </div>
-            <p className="text-xs sm:text-sm text-white/80 mt-2 sm:mt-3 font-medium">{card.title}</p>
+    <div className="space-y-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.16),_transparent_34%),linear-gradient(135deg,_#ffffff_0%,_#f8fafc_58%,_#eefbf6_100%)] p-6 shadow-sm">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm font-bold text-sky-700">لوحة تشغيل يومية</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-secondary">
+              كل ما يحتاجه صاحب المصنع في مكان واحد
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-gray-600">
+              الصفحة دي بتعطيك حالة المخزون، أهم التنبيهات، أفضل المنتجات، وأسرع
+              الطرق للوصول للمهام اليومية بدون لف كثير داخل النظام.
+            </p>
           </div>
-        ))}
-      </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <QuickActionCard
-          href="/dashboard/orders"
-          icon="📋"
-          iconBgColor="bg-blue-50"
-          iconHoverColor="group-hover:bg-blue-100"
-          title="متابعة الطلبات"
-          description="عرض وإدارة الطلبات"
-        />
-        <QuickActionCard
-          href="/dashboard/products"
-          icon="👕"
-          iconBgColor="bg-primary/10"
-          iconHoverColor="group-hover:bg-primary/20"
-          title="إدارة المنتجات"
-          description="إضافة وتعديل المنتجات"
-        />
-        <QuickActionCard
-          href="/dashboard/messages"
-          icon="💬"
-          iconBgColor="bg-purple-50"
-          iconHoverColor="group-hover:bg-purple-100"
-          title="الرسائل"
-          description={stats.unreadMessages > 0 ? `${stats.unreadMessages} رسائل غير مقروءة` : "لا توجد رسائل جديدة"}
-          badge={stats.unreadMessages > 0 ? stats.unreadMessages : undefined}
-        />
-        <QuickActionCard
-          href="/dashboard/settings"
-          icon="⚙️"
-          iconBgColor="bg-gray-50"
-          iconHoverColor="group-hover:bg-gray-100"
-          title="الإعدادات"
-          description="تخصيص الموقع والإعدادات"
-        />
-      </div>
-
-      {/* Recent Orders */}
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm overflow-hidden animate-slide-up">
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
-          <h2 className="text-base sm:text-lg font-bold text-secondary">آخر الطلبات</h2>
-          <Link
-            href="/dashboard/orders"
-            className="text-primary text-xs sm:text-sm font-semibold hover:underline transition-colors"
-          >
-            عرض الكل ←
-          </Link>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/dashboard/inventory"
+              className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100"
+            >
+              {report.summary.needAction} منتجات تحتاج متابعة
+            </Link>
+            <Link
+              href="/dashboard/production"
+              className="rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-bold text-violet-700 shadow-sm transition hover:bg-violet-100"
+            >
+              افتح خطة الإنتاج اليومية
+            </Link>
+          </div>
         </div>
-        
-        {recentOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400">لا توجد طلبات حالياً</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead className="bg-gray-50">
-                <tr className="text-right">
-                  <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">رقم الطلب</th>
-                  <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">العميل</th>
-                  <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">المنتج</th>
-                  <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">الكمية</th>
-                  <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">الإجمالي</th>
-                  <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">الحالة</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentOrders.map((order, idx) => {
-                  const status = getStatusBadge(order.status);
-                  return (
-                    <tr 
-                      key={order.id} 
-                      className="hover:bg-gray-50 transition-colors animate-fade-in"
-                      style={{ animationDelay: `${idx * 0.05}s` }}
-                    >
-                      <td className="px-4 sm:px-6 py-4">
-                        <span className="font-mono text-xs sm:text-sm text-primary font-semibold">
-                          #{order.id.slice(-6)}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-700 font-medium">
-                        {order.customer_name}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-600">
-                        {order.product_name?.length > 30 
-                          ? `${order.product_name.slice(0, 30)}...` 
-                          : order.product_name}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-700">
-                        {order.quantity}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-semibold text-primary">
-                        {order.total.toLocaleString()} ج.م
-                      </td>
-                      <td className="px-4 sm:px-6 py-4">
-                        <span className={`inline-flex px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${status.bgColor} ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      </section>
 
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-out forwards;
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.5s ease-out forwards;
-        }
-      `}</style>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label="إجمالي المنتجات" value={report.summary.totalProducts.toLocaleString('ar-EG')} hint="عدد الأصناف المسجلة" tone="blue" />
+        <SummaryCard label="إجمالي القطع" value={report.summary.totalUnits.toLocaleString('ar-EG')} hint="كل القطع المتوفرة حاليًا" tone="emerald" />
+        <SummaryCard label="قيمة المخزون" value={formatCurrency(report.summary.totalValue)} hint="القيمة الحالية للبيع" tone="amber" />
+        <SummaryCard label="جاهزية التشغيل" value={`${report.summary.readinessRate}%`} hint={`${report.summary.good} منتج مستقر`} tone="rose" />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black text-secondary">ما الذي يحتاج قرار الآن؟</h2>
+              <p className="text-sm text-gray-500">أهم التنبيهات التي تستحق الانتباه أولًا</p>
+            </div>
+            <Link href="/dashboard/reports" className="text-sm font-bold text-primary">
+              كل التقارير
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {activityFeed.map((event) => (
+              <Link
+                key={event.id}
+                href={event.href}
+                className="block rounded-3xl border border-slate-100 bg-slate-50/70 p-4 transition hover:border-slate-200 hover:bg-white"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-gray-900">{event.title}</p>
+                    <p className="mt-1 text-sm text-gray-600">{event.description}</p>
+                  </div>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-gray-600 shadow-sm">
+                    {event.meta}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-black text-secondary">توزيع الفئات</h2>
+            <p className="text-sm text-gray-500">يعرفك بسرعة أين تتركز قيمة المخزون</p>
+          </div>
+
+          <div className="space-y-4">
+            {report.categoryBreakdown.map((category) => (
+              <div key={category.key} className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">{category.label}</p>
+                    <p className="text-xs text-gray-500">
+                      {category.count} منتج | {category.quantity.toLocaleString('ar-EG')} قطعة
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-secondary">{category.share}%</p>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500"
+                    style={{ width: `${Math.max(category.share, 8)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-[2rem] border border-amber-100 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black text-secondary">المنتجات التي تحتاج تصنيع</h2>
+              <p className="text-sm text-gray-500">أولوية اليوم بناء على فجوة المخزون</p>
+            </div>
+            <Link href="/dashboard/production" className="text-sm font-bold text-amber-700">
+              افتح الإنتاج
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {report.topShortages.slice(0, 4).map((item) => (
+              <div key={item.id} className="rounded-3xl border border-amber-100 bg-amber-50/50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-gray-900">{item.name}</p>
+                    <p className="text-sm text-gray-500">{getCategoryLabel(item.category || '')}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-amber-700">+{item.gap}</p>
+                    <p className="text-xs text-gray-500">مطلوب</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black text-secondary">أفضل المنتجات استقرارًا</h2>
+              <p className="text-sm text-gray-500">الأصناف التي وضعها مطمئن ويمكن الاعتماد عليها</p>
+            </div>
+            <Link href="/dashboard/charts" className="text-sm font-bold text-emerald-700">
+              عرض الرسوم
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {report.healthiest.slice(0, 4).map((item) => (
+              <div key={item.id} className="rounded-3xl border border-emerald-100 bg-emerald-50/40 p-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="font-bold text-gray-900">{item.name}</p>
+                  <span className="text-sm font-bold text-emerald-700">{item.stockPercentage}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                    style={{ width: `${Math.max(item.stockPercentage, 10)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <QuickLink href="/dashboard/products/new" title="إضافة منتج" subtitle="سجل صنف جديد بسرعة" tone="blue" />
+        <QuickLink href="/dashboard/inventory" title="المخزون" subtitle="راجع الكميات الحالية" tone="amber" />
+        <QuickLink href="/dashboard/products" title="المنتجات" subtitle="أسعار وصور وبيانات" tone="emerald" />
+        <QuickLink href="/dashboard/production" title="الإنتاج" subtitle="رتب الأولويات اليومية" tone="violet" />
+        <QuickLink href="/dashboard/reports" title="Reports" subtitle="ملخصات جاهزة للإدارة" tone="cyan" />
+        <QuickLink href="/dashboard/settings" title="الإعدادات" subtitle="مركز وصول سريع" tone="slate" />
+      </section>
     </div>
   );
 }
 
-// مكون Quick Action Card منفصل
-function QuickActionCard({ 
-  href, 
-  icon, 
-  iconBgColor, 
-  iconHoverColor, 
-  title, 
-  description,
-  badge 
-}: { 
-  href: string; 
-  icon: string; 
-  iconBgColor: string; 
-  iconHoverColor: string; 
-  title: string; 
-  description: string;
-  badge?: number;
+function SummaryCard({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: 'blue' | 'emerald' | 'amber' | 'rose';
 }) {
+  const toneMap = {
+    blue: 'border-blue-100 bg-blue-50/70 text-blue-700',
+    emerald: 'border-emerald-100 bg-emerald-50/70 text-emerald-700',
+    amber: 'border-amber-100 bg-amber-50/70 text-amber-700',
+    rose: 'border-rose-100 bg-rose-50/70 text-rose-700',
+  } as const;
+
+  return (
+    <div className={`rounded-[1.75rem] border p-5 shadow-sm ${toneMap[tone]}`}>
+      <p className="text-sm font-medium">{label}</p>
+      <p className="mt-3 text-3xl font-black">{value}</p>
+      <p className="mt-2 text-xs opacity-80">{hint}</p>
+    </div>
+  );
+}
+
+function QuickLink({
+  href,
+  title,
+  subtitle,
+  tone,
+}: {
+  href: string;
+  title: string;
+  subtitle: string;
+  tone: 'blue' | 'amber' | 'emerald' | 'violet' | 'cyan' | 'slate';
+}) {
+  const toneMap = {
+    blue: 'border-blue-200 bg-blue-50 hover:bg-blue-100',
+    amber: 'border-amber-200 bg-amber-50 hover:bg-amber-100',
+    emerald: 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100',
+    violet: 'border-violet-200 bg-violet-50 hover:bg-violet-100',
+    cyan: 'border-cyan-200 bg-cyan-50 hover:bg-cyan-100',
+    slate: 'border-slate-200 bg-slate-50 hover:bg-slate-100',
+  } as const;
+
   return (
     <Link
       href={href}
-      className="group bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-3 sm:gap-4 relative"
+      className={`rounded-[1.5rem] border p-4 text-center shadow-sm transition ${toneMap[tone]}`}
     >
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 ${iconBgColor} rounded-lg sm:rounded-xl flex items-center justify-center ${iconHoverColor} transition-colors flex-shrink-0`}>
-        <span className="text-xl sm:text-2xl">{icon}</span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-secondary text-sm sm:text-base truncate">{title}</h3>
-        <p className="text-xs sm:text-sm text-gray-500 truncate">{description}</p>
-      </div>
-      {badge && badge > 0 && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-          {badge}
-        </div>
-      )}
+      <h3 className="text-sm font-black text-gray-900">{title}</h3>
+      <p className="mt-1 text-xs text-gray-600">{subtitle}</p>
     </Link>
   );
 }
