@@ -5,14 +5,35 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
+import { ADMIN_EMAIL } from '@/lib/auth-role';
+
+function getLoginErrorMessage(message?: string) {
+  const normalizedMessage = message?.toLowerCase() ?? '';
+
+  if (normalizedMessage.includes('invalid login credentials')) {
+    return 'البيانات غير صحيحة. جرّب البريد admin@ibdaa.com وتأكد من كلمة المرور داخل Supabase Auth.';
+  }
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return 'البريد الإلكتروني غير مؤكد بعد. فعّل الحساب من Supabase أو أوقف شرط تأكيد البريد.';
+  }
+
+  if (normalizedMessage.includes('invalid email')) {
+    return 'صيغة البريد الإلكتروني غير صحيحة.';
+  }
+
+  return 'فشل تسجيل الدخول. تأكد من البريد وكلمة المرور، أو راجع مستخدم Supabase.';
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState('');
   const [checkingSession, setCheckingSession] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -44,6 +65,7 @@ export default function AdminLoginPage() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setErrorMessage('');
 
     startTransition(async () => {
       const { error } = await supabase.auth.signInWithPassword({
@@ -52,7 +74,9 @@ export default function AdminLoginPage() {
       });
 
       if (error) {
-        toast.error('فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.');
+        const nextErrorMessage = getLoginErrorMessage(error.message);
+        setErrorMessage(nextErrorMessage);
+        toast.error(nextErrorMessage);
         return;
       }
 
@@ -79,6 +103,8 @@ export default function AdminLoginPage() {
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-16">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(196,122,58,0.16),_transparent_35%),radial-gradient(circle_at_bottom,_rgba(27,42,56,0.12),_transparent_30%)]" />
+      <div className="absolute right-10 top-10 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute bottom-10 left-10 h-40 w-40 rounded-full bg-secondary/10 blur-3xl" />
       <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-primary/10 bg-white/80 shadow-2xl backdrop-blur md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-[linear-gradient(145deg,rgba(27,42,56,0.96),rgba(16,28,39,0.92))] p-10 text-white md:flex md:flex-col md:justify-between">
           <div>
@@ -117,7 +143,10 @@ export default function AdminLoginPage() {
               </span>
               <h2 className="mt-5 text-3xl font-black text-secondary">تسجيل الدخول</h2>
               <p className="mt-3 text-sm leading-7 text-gray-600">
-                أدخل البريد الإلكتروني وكلمة المرور الخاصة بحساب الإدارة.
+                أدخل بيانات حساب الإدارة في Supabase. الإيميل الافتراضي بالمشروع هو
+                {' '}
+                <span className="font-black text-secondary">{ADMIN_EMAIL}</span>
+                .
               </p>
             </div>
 
@@ -138,17 +167,32 @@ export default function AdminLoginPage() {
 
               <label className="block">
                 <span className="mb-2 block text-sm font-bold text-secondary">كلمة المرور</span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  required
-                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-gray-900 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  dir="ltr"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    required
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pl-24 text-left text-gray-900 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-secondary transition hover:bg-primary/10"
+                  >
+                    {showPassword ? 'إخفاء' : 'إظهار'}
+                  </button>
+                </div>
               </label>
+
+              {errorMessage ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-7 text-red-700">
+                  {errorMessage}
+                </div>
+              ) : null}
 
               <button
                 type="submit"
@@ -159,8 +203,17 @@ export default function AdminLoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 rounded-3xl border border-primary/10 bg-primary/5 p-4 text-sm leading-7 text-gray-700">
+            <div className="mt-6 rounded-3xl border border-primary/10 bg-[linear-gradient(135deg,rgba(196,122,58,0.08),rgba(255,255,255,0.9))] p-4 text-sm leading-7 text-gray-700">
               في حالة نجاح تسجيل الدخول سيتم تحويلك مباشرة إلى صفحة <span className="font-bold text-secondary">Dashboard</span>.
+              إذا استمر الفشل فراجع في Supabase:
+              {' '}
+              <span className="font-bold">Authentication &gt; Users</span>
+              {' '}
+              أن المستخدم
+              {' '}
+              <span className="font-bold text-secondary">{ADMIN_EMAIL}</span>
+              {' '}
+              موجود فعلاً وكلمة مروره صحيحة.
             </div>
 
             <div className="mt-6 text-center text-sm text-gray-600 md:text-right">
