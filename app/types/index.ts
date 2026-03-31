@@ -84,3 +84,12 @@ export interface CategoryItem {
   label: string;
   icon?: string;
 }
+
+// Admin Navigation Types
+export interface NavItem {
+  href: string;
+  label: string;
+  permission?: string;  // جعلها اختيارية لتجنب المشاكل
+  badge?: number;
+  icon?: React.ReactNode;
+}

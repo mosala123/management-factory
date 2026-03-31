@@ -215,66 +215,69 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const report = useMemo(() => buildInventoryReport(products), [products]);
 
+  // تم إصلاح الخطأ هنا بإضافة as const
   const navItems = useMemo<NavItem[]>(
     () =>
-      [
-        {
-          href: '/dashboard',
-          label: 'الرئيسية',
-          permission: 'canViewDashboard',
-          badge: 0,
-          icon: icons.dashboard,
-        },
-        {
-          href: '/dashboard/inventory',
-          label: 'المخزون',
-          permission: 'canViewInventory',
-          badge: report.summary.needAction,
-          icon: icons.inventory,
-        },
-        {
-          href: '/dashboard/products',
-          label: 'المنتجات',
-          permission: 'canViewProducts',
-          badge: 0,
-          icon: icons.products,
-        },
-        {
-          href: '/dashboard/production',
-          label: 'الإنتاج',
-          permission: 'canViewProduction',
-          badge: report.summary.critical + report.summary.outOfStock,
-          icon: icons.production,
-        },
-        {
-          href: '/dashboard/reports',
-          label: 'التقارير',
-          permission: 'canViewReports',
-          badge: 0,
-          icon: icons.reports,
-        },
-        {
-          href: '/dashboard/charts',
-          label: 'الرسوم البيانية',
-          permission: 'canViewReports',
-          badge: 0,
-          icon: icons.charts,
-        },
-        {
-          href: '/dashboard/users',
-          label: 'المستخدمين',
-          permission: 'canEditSettings',
-          badge: 0,
-          icon: icons.dashboard,
-        },
-        {
-          href: '/dashboard/settings',
-          label: 'الإعدادات',
-          permission: 'canViewSettings',
-          badge: 0,
-          icon: icons.settings,
-        },
-      ].filter(
+      (
+        [
+          {
+            href: '/dashboard',
+            label: 'الرئيسية',
+            permission: 'canViewDashboard',
+            badge: 0,
+            icon: icons.dashboard,
+          },
+          {
+            href: '/dashboard/inventory',
+            label: 'المخزون',
+            permission: 'canViewInventory',
+            badge: report.summary.needAction,
+            icon: icons.inventory,
+          },
+          {
+            href: '/dashboard/products',
+            label: 'المنتجات',
+            permission: 'canViewProducts',
+            badge: 0,
+            icon: icons.products,
+          },
+          {
+            href: '/dashboard/production',
+            label: 'الإنتاج',
+            permission: 'canViewProduction',
+            badge: report.summary.critical + report.summary.outOfStock,
+            icon: icons.production,
+          },
+          {
+            href: '/dashboard/reports',
+            label: 'التقارير',
+            permission: 'canViewReports',
+            badge: 0,
+            icon: icons.reports,
+          },
+          {
+            href: '/dashboard/charts',
+            label: 'الرسوم البيانية',
+            permission: 'canViewReports',
+            badge: 0,
+            icon: icons.charts,
+          },
+          {
+            href: '/dashboard/users',
+            label: 'المستخدمين',
+            permission: 'canEditSettings',
+            badge: 0,
+            icon: icons.dashboard,
+          },
+          {
+            href: '/dashboard/settings',
+            label: 'الإعدادات',
+            permission: 'canViewSettings',
+            badge: 0,
+            icon: icons.settings,
+          },
+        ] as const
+      ).filter(
         (item) =>
           item.href !== '/dashboard/users' && hasPermission(userRole, item.permission)
       ),
