@@ -11,18 +11,70 @@ function getLoginErrorMessage(message?: string) {
   const normalizedMessage = message?.toLowerCase() ?? '';
 
   if (normalizedMessage.includes('invalid login credentials')) {
-    return 'البيانات غير صحيحة. جرّب البريد admin@ibdaa.com وتأكد من كلمة المرور داخل Supabase Auth.';
+    return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
   }
 
   if (normalizedMessage.includes('email not confirmed')) {
-    return 'البريد الإلكتروني غير مؤكد بعد. فعّل الحساب من Supabase أو أوقف شرط تأكيد البريد.';
+    return 'البريد الإلكتروني غير مفعّل. تواصل مع المسؤول.';
   }
 
   if (normalizedMessage.includes('invalid email')) {
     return 'صيغة البريد الإلكتروني غير صحيحة.';
   }
 
-  return 'فشل تسجيل الدخول. تأكد من البريد وكلمة المرور، أو راجع مستخدم Supabase.';
+  return 'فشل تسجيل الدخول. تأكد من بياناتك وحاول مجدداً.';
+}
+
+const FEATURES = [
+  {
+    title: 'إدارة المخزون',
+    description: 'تتبّع الكميات المتاحة والنواقص لحظةً بلحظة، واتخذ قرارات الشراء بثقة.',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+      />
+    ),
+  },
+  {
+    title: 'تقارير تشغيلية',
+    description: 'مؤشرات الأداء وخطة الإنتاج والتوقعات — كلها في لوحة تحكم واحدة.',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
+    ),
+  },
+  {
+    title: 'دخول آمن ومحمي',
+    description: 'صلاحيات محكومة تضمن وصول الشخص المناسب فقط إلى بيانات المصنع.',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+      />
+    ),
+  },
+];
+
+function FeatureIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/20">
+      <svg
+        className="h-4 w-4 text-primary-light"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        {children}
+      </svg>
+    </div>
+  );
 }
 
 export default function AdminLoginPage() {
@@ -44,9 +96,7 @@ export default function AdminLoginPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!isMounted) {
-        return;
-      }
+      if (!isMounted) return;
 
       if (user) {
         router.replace('/dashboard');
@@ -74,9 +124,9 @@ export default function AdminLoginPage() {
       });
 
       if (error) {
-        const nextErrorMessage = getLoginErrorMessage(error.message);
-        setErrorMessage(nextErrorMessage);
-        toast.error(nextErrorMessage);
+        const msg = getLoginErrorMessage(error.message);
+        setErrorMessage(msg);
+        toast.error(msg);
         return;
       }
 
@@ -86,144 +136,205 @@ export default function AdminLoginPage() {
     });
   };
 
+  /* ── Loading state ── */
   if (checkingSession) {
     return (
-      <section className="flex min-h-screen items-center justify-center px-6 py-16">
-        <div className="w-full max-w-md rounded-[2rem] border border-primary/10 bg-white/90 p-8 text-center shadow-2xl backdrop-blur-sm">
-          <div className="mx-auto mb-4 h-14 w-14 animate-pulse rounded-full bg-primary/15" />
-          <h1 className="text-2xl font-black text-secondary">جاري تجهيز صفحة الدخول</h1>
-          <p className="mt-3 text-sm text-gray-600">
-            نتحقق من حالة الجلسة حتى نوجهك للمسار الصحيح.
-          </p>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-9 w-9 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+          <p className="text-sm text-gray-400">جاري التحقق من الجلسة…</p>
         </div>
-      </section>
+      </div>
     );
   }
 
+  /* ── Main ── */
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-16">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(196,122,58,0.16),_transparent_35%),radial-gradient(circle_at_bottom,_rgba(27,42,56,0.12),_transparent_30%)]" />
-      <div className="absolute right-10 top-10 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute bottom-10 left-10 h-40 w-40 rounded-full bg-secondary/10 blur-3xl" />
-      <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-primary/10 bg-white/80 shadow-2xl backdrop-blur md:grid-cols-[1.05fr_0.95fr]">
-        <div className="hidden bg-[linear-gradient(145deg,rgba(27,42,56,0.96),rgba(16,28,39,0.92))] p-10 text-white md:flex md:flex-col md:justify-between">
-          <div>
-            <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/90">
-              لوحة إدارة المصنع
-            </span>
-            <h1 className="mt-6 text-4xl font-black leading-tight text-white">
-              دخول سريع وآمن لإدارة المخزون والإنتاج
-            </h1>
-            <p className="mt-4 text-base leading-8 text-white/75">
-              استخدم بيانات حسابك للدخول إلى لوحة التحكم ومتابعة المنتجات والتقارير من مكان واحد.
+    <div className="grid min-h-screen md:grid-cols-2">
+
+      {/* ════════════════════════════
+          LEFT — Dark sidebar
+      ════════════════════════════ */}
+      <div className="hidden flex-col justify-between bg-secondary p-10 md:flex">
+
+        {/* Top section */}
+        <div>
+          {/* Logo mark */}
+          <div className="mb-10 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/20">
+            <svg
+              className="h-5 w-5 text-primary-light"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-4xl font-black leading-tight text-white">
+            لوحة إدارة<br />المصنع
+          </h1>
+          <p className="mt-3 text-sm leading-7 text-white/50">
+            منصة متكاملة تجمع الإنتاج والمخزون والتقارير في مكان واحد،
+            لتساعدك على اتخاذ قرارات أذكى بشكل أسرع.
+          </p>
+
+          {/* Divider */}
+          <div className="my-8 h-px w-16 bg-white/10" />
+
+          {/* Feature list */}
+          <ul className="flex flex-col gap-6">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="flex items-start gap-4">
+                <FeatureIcon>{f.icon}</FeatureIcon>
+                <div>
+                  <p className="text-sm font-bold text-white">{f.title}</p>
+                  <p className="mt-1 text-xs leading-6 text-white/45">{f.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Bottom */}
+        <p className="text-xs text-white/20">
+          نظام إدارة المصنع &copy; {new Date().getFullYear()}
+        </p>
+      </div>
+
+      {/* ════════════════════════════
+          RIGHT — Login form
+      ════════════════════════════ */}
+      <div className="flex items-center justify-center bg-white px-6 py-16">
+        <div className="w-full max-w-sm" dir="rtl">
+
+          {/* Header */}
+          <div className="mb-8">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary">
+              لوحة التحكم
+            </p>
+            <h2 className="text-3xl font-black text-secondary">مرحباً بعودتك</h2>
+            <p className="mt-2 text-sm leading-7 text-gray-500">
+              أدخل بيانات حسابك للوصول إلى بيانات المصنع ومتابعة العمليات.
             </p>
           </div>
 
-          <div className="grid gap-4">
-            <div className="rounded-3xl border border-white/10 bg-white/8 p-5">
-              <p className="text-sm font-bold text-white">متابعة المخزون</p>
-              <p className="mt-2 text-sm leading-7 text-white/70">
-                مراجعة النواقص والكميات الحالية واتخاذ قرارات أسرع.
-              </p>
-            </div>
-            <div className="rounded-3xl border border-primary-light/20 bg-primary/10 p-5">
-              <p className="text-sm font-bold text-white">تقارير تشغيلية أوضح</p>
-              <p className="mt-2 text-sm leading-7 text-white/70">
-                الوصول إلى المؤشرات والمنتجات وخطة الإنتاج بعد تسجيل الدخول مباشرة.
-              </p>
-            </div>
-          </div>
-        </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
 
-        <div className="p-6 sm:p-10">
-          <div className="mx-auto w-full max-w-md">
-            <div className="mb-8 text-center md:text-right">
-              <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary">
-                /admin/login
-              </span>
-              <h2 className="mt-5 text-3xl font-black text-secondary">تسجيل الدخول</h2>
-              <p className="mt-3 text-sm leading-7 text-gray-600">
-                أدخل بيانات حساب الإدارة في Supabase. الإيميل الافتراضي بالمشروع هو
-                {' '}
-                <span className="font-black text-secondary">{ADMIN_EMAIL}</span>
-                .
-              </p>
+            {/* Email */}
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-secondary">
+                البريد الإلكتروني
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                autoComplete="email"
+                required
+                dir="ltr"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-left text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-secondary">البريد الإلكتروني</span>
+            {/* Password */}
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-secondary">
+                كلمة المرور
+              </label>
+              <div className="relative">
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="admin@example.com"
-                  autoComplete="email"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
                   required
-                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-gray-900 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                   dir="ltr"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pl-20 text-left text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
                 />
-              </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-secondary shadow-sm ring-1 ring-gray-100 transition hover:ring-primary/30"
+                >
+                  {showPassword ? 'إخفاء' : 'إظهار'}
+                </button>
+              </div>
+            </div>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-secondary">كلمة المرور</span>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    required
-                    className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pl-24 text-left text-gray-900 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    dir="ltr"
+            {/* Error message */}
+            {errorMessage ? (
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                <svg
+                  className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((current) => !current)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-secondary transition hover:bg-primary/10"
-                  >
-                    {showPassword ? 'إخفاء' : 'إظهار'}
-                  </button>
-                </div>
-              </label>
+                </svg>
+                <p className="text-sm leading-6 text-red-700">{errorMessage}</p>
+              </div>
+            ) : null}
 
-              {errorMessage ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-7 text-red-700">
-                  {errorMessage}
-                </div>
-              ) : null}
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isPending}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                  جاري تسجيل الدخول…
+                </>
+              ) : (
+                'دخول إلى لوحة التحكم'
+              )}
+            </button>
+          </form>
 
-              <button
-                type="submit"
-                disabled={isPending}
-                className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3.5 text-base font-black text-white shadow-lg shadow-primary/30 transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isPending ? 'جاري تسجيل الدخول...' : 'دخول إلى لوحة التحكم'}
-              </button>
-            </form>
-
-            <div className="mt-6 rounded-3xl border border-primary/10 bg-[linear-gradient(135deg,rgba(196,122,58,0.08),rgba(255,255,255,0.9))] p-4 text-sm leading-7 text-gray-700">
-              في حالة نجاح تسجيل الدخول سيتم تحويلك مباشرة إلى صفحة <span className="font-bold text-secondary">Dashboard</span>.
-              إذا استمر الفشل فراجع في Supabase:
-              {' '}
-              <span className="font-bold">Authentication &gt; Users</span>
-              {' '}
-              أن المستخدم
-              {' '}
-              <span className="font-bold text-secondary">{ADMIN_EMAIL}</span>
-              {' '}
-              موجود فعلاً وكلمة مروره صحيحة.
-            </div>
-
-            <div className="mt-6 text-center text-sm text-gray-600 md:text-right">
-              <Link href="/" className="font-bold text-primary hover:text-primary-dark">
-                العودة إلى الصفحة الرئيسية
-              </Link>
-            </div>
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <Link
+              href="/"
+              className="text-sm text-gray-400 transition hover:text-primary"
+            >
+              ← العودة إلى الصفحة الرئيسية
+            </Link>
           </div>
+
         </div>
       </div>
-    </section>
+
+    </div>
   );
 }

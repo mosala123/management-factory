@@ -18,13 +18,13 @@ type NavItem = {
   href: string;
   label: string;
   permission:
-    | 'canViewDashboard'
-    | 'canViewInventory'
-    | 'canViewProducts'
-    | 'canViewProduction'
-    | 'canViewReports'
-    | 'canViewSettings'
-    | 'canEditSettings';
+  | 'canViewDashboard'
+  | 'canViewInventory'
+  | 'canViewProducts'
+  | 'canViewProduction'
+  | 'canViewReports'
+  | 'canViewSettings'
+  | 'canEditSettings';
   badge?: number;
   icon: ReactNode;
 };
@@ -108,13 +108,11 @@ function SidebarNav({
             href={item.href}
             onClick={onNavigate}
             title={collapsed ? item.label : undefined}
-            className={`group flex items-center rounded-2xl transition-all ${
-              collapsed ? 'justify-center p-3' : 'gap-3 px-3.5 py-3'
-            } ${
-              isActive
+            className={`group flex items-center rounded-2xl transition-all ${collapsed ? 'justify-center p-3' : 'gap-3 px-3.5 py-3'
+              } ${isActive
                 ? 'bg-white/14 text-white shadow-inner'
                 : 'text-white/65 hover:bg-white/8 hover:text-white'
-            }`}
+              }`}
           >
             <span className={isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}>
               {item.icon}
@@ -337,9 +335,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       )}
 
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full flex-col bg-gradient-to-b from-[var(--secondary)] to-[var(--secondary-dark)] transition-all duration-300 lg:static lg:z-auto ${
-          isMobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
-        } ${isSidebarOpen ? 'w-72' : 'w-20'} `}
+        className={`fixed right-0 top-0 z-50 flex h-full flex-col bg-gradient-to-b from-[var(--secondary)] to-[var(--secondary-dark)] transition-all duration-300 lg:static lg:z-auto ${isMobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+          } ${isSidebarOpen ? 'w-72' : 'w-20'} `}
       >
         <div className={`flex items-center border-b border-white/10 ${isSidebarOpen ? 'gap-3 px-5 py-4' : 'justify-center p-4'}`}>
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark shadow-md">
@@ -375,9 +372,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
           <button
             onClick={handleLogout}
-            className={`flex w-full items-center rounded-2xl text-white/70 transition hover:bg-red-500/10 hover:text-red-300 ${
-              isSidebarOpen ? 'gap-3 px-3.5 py-3' : 'justify-center p-3'
-            }`}
+            className={`flex w-full items-center rounded-2xl text-white/70 transition hover:bg-red-500/10 hover:text-red-300 ${isSidebarOpen ? 'gap-3 px-3.5 py-3' : 'justify-center p-3'
+              }`}
           >
             {icons.logout}
             {isSidebarOpen && <span className="text-sm font-semibold">تسجيل الخروج</span>}
@@ -403,8 +399,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="hidden rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-right md:block">
-                <p className="text-[11px] font-bold text-emerald-700">جاهزية المخزون</p>
+              <div className="hidden rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-right md:flex md:items-center md:gap-1">
+                <p className="text-[11px] font-bold text-emerald-700">جاهزية المخزون :</p>
                 <p className="text-sm font-black text-emerald-700">{report.summary.readinessRate}%</p>
               </div>
 
