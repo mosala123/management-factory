@@ -1,5 +1,6 @@
 // app/api/products/[id]/route.ts
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { UpdateProductRequest, ApiResponse } from '@/lib/types/api';
 import { Product } from '@/lib/types/database';
 import { NextRequest, NextResponse } from 'next/server';
@@ -60,7 +61,7 @@ export async function PUT(
             return authCheck.error;
         }
 
-        const supabase = await createClient();
+        const supabase = createAdminClient();
         const { id } = await params;
         const body: UpdateProductRequest = await request.json();
 
@@ -81,13 +82,13 @@ export async function PUT(
             );
         }
 
-        const updateData = {
-            ...body,
-            updated_at: new Date().toISOString(),
-        };
+        const safeBody = Object.fromEntries(
+            Object.entries(body).filter(([key]) => key !== 'id')
+        ) as UpdateProductRequest;
 
-        // Remove id from update data
-        delete (updateData as any).id;
+        const updateData = {
+            ...safeBody,
+        };
 
         const { data, error } = await supabase
             .from('products')
@@ -137,7 +138,7 @@ export async function DELETE(
             return authCheck.error;
         }
 
-        const supabase = await createClient();
+        const supabase = createAdminClient();
         const { id } = await params;
 
         // Check if product exists

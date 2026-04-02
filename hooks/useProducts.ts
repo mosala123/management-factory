@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import type { Product } from "@/lib/types";
 import toast from "react-hot-toast";
 
@@ -28,10 +29,13 @@ function normalizeProductsResponse(payload: ProductsApiResponse | Product[]): Pr
 }
 
 export function useProducts() {
+  const supabase = useMemo(() => createClient(), []);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const lastQueryRef = useRef({ page: 1, pageSize: 10 });
 
   const fetchProducts = useCallback(async (page = 1, pageSize = 10) => {
+    lastQueryRef.current = { page, pageSize };
     setLoading(true);
 
     try {
@@ -55,6 +59,23 @@ export function useProducts() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("products-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => {
+          void fetchProducts(lastQueryRef.current.page, lastQueryRef.current.pageSize);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchProducts, supabase]);
 
   const addProduct = async (product: Omit<Product, "id" | "created_at" | "updated_at">) => {
     try {

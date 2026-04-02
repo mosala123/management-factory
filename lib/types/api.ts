@@ -7,26 +7,35 @@ export interface ApiResponse<T = unknown> {
 
 export interface UpdateProductRequest {
     name?: string;
+    slug?: string;
     description?: string;
+    summary?: string;
     price?: number;
-    stock?: number;
+    quantity?: number;
+    min_stock?: number;
     category?: string;
-    image_url?: string;
+    hero_image?: string;
+    gallery?: string[];
+    specs?: string[];
+    tags?: string[];
+    badge?: string | null;
+    in_stock?: boolean;
 }
 
-// ✅ أضف الـ interface دي الجديدة
 export interface CreateProductRequest {
     name: string;
-    slug: string;
-    description: string;
+    slug?: string;
+    description?: string;
+    summary?: string;
     category: string;
     price: number;
-    quantity: number;
-    min_stock: number;
-    sku: string;
-    cost?: number;
-    images?: string[];
-    summary?: string;
-    specs?: Record<string, unknown>;
+    quantity?: number;
+    min_stock?: number;
+    sku?: string;
+    hero_image: string;
+    gallery?: string[];
+    specs?: string[];
     tags?: string[];
+    badge?: string | null;
+    in_stock?: boolean;
 }
