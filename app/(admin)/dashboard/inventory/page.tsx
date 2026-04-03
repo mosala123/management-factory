@@ -1,295 +1,298 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useProducts } from '@/hooks/useProducts';
-import {
-  buildInventoryReport,
-  type InventoryStatus,
-  type ProductLike,
-} from '@/lib/reporting';
-import { formatCurrency, getCategoryLabel } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { useProducts } from '@/hooks/useProducts'
+import { buildInventoryReport, type InventoryStatus, type ProductLike } from '@/lib/reporting'
+import { formatCurrency, getCategoryLabel } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-type FilterStatus = InventoryStatus | 'all';
+type FilterStatus = InventoryStatus | 'all'
 
-const statusConfig = {
-  out: {
-    label: 'غير متوفر',
-    badge: 'border-red-200 bg-red-50 text-red-700',
-    bar: 'from-red-500 to-rose-500',
-  },
-  critical: {
-    label: 'حرج',
-    badge: 'border-orange-200 bg-orange-50 text-orange-700',
-    bar: 'from-orange-500 to-amber-500',
-  },
-  low: {
-    label: 'منخفض',
-    badge: 'border-amber-200 bg-amber-50 text-amber-700',
-    bar: 'from-amber-500 to-yellow-400',
-  },
-  good: {
-    label: 'مستقر',
-    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    bar: 'from-emerald-500 to-teal-400',
-  },
-} as const;
+const STATUS = {
+  out:      { label: 'نفد',     badgeCls: 'border-red-200    bg-red-50    text-red-700',    barCls: 'bg-red-500',    rowCls: 'border-r-[3px] border-r-red-400    bg-red-50/20',    dotCls: 'bg-red-500    animate-pulse', priority: 0 },
+  critical: { label: 'حرج',    badgeCls: 'border-orange-200 bg-orange-50 text-orange-700', barCls: 'bg-orange-500', rowCls: 'border-r-[3px] border-r-orange-400 bg-orange-50/15', dotCls: 'bg-orange-500',              priority: 1 },
+  low:      { label: 'منخفض',  badgeCls: 'border-amber-200  bg-amber-50  text-amber-700',  barCls: 'bg-amber-400',  rowCls: 'border-r-[3px] border-r-amber-400  bg-amber-50/15',  dotCls: 'bg-amber-400',               priority: 2 },
+  good:     { label: 'مستقر', badgeCls: 'border-emerald-200 bg-emerald-50 text-emerald-700', barCls: 'bg-emerald-500', rowCls: '', dotCls: 'bg-emerald-500', priority: 3 },
+} as const
+
+const FILTER_TABS: { value: FilterStatus; label: string; color: string }[] = [
+  { value: 'all',      label: 'الكل',    color: 'bg-slate-700  text-white' },
+  { value: 'out',      label: 'نفد',     color: 'bg-red-500    text-white' },
+  { value: 'critical', label: 'حرج',    color: 'bg-orange-500 text-white' },
+  { value: 'low',      label: 'منخفض',  color: 'bg-amber-400  text-white' },
+  { value: 'good',     label: 'مستقر', color: 'bg-emerald-500 text-white' },
+]
 
 export default function InventoryPage() {
-  const { products, isLoading, fetchProducts } = useProducts();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
+  const { products, isLoading, fetchProducts } = useProducts()
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
 
-  useEffect(() => {
-    fetchProducts(1, 1000);
-  }, [fetchProducts]);
+  useEffect(() => { fetchProducts(1, 1000) }, [fetchProducts])
 
-  const report = useMemo(
-    () => buildInventoryReport(products as ProductLike[]),
-    [products]
-  );
+  const report = useMemo(() => buildInventoryReport(products as ProductLike[]), [products])
 
-  const filteredItems = useMemo(() => {
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
     return report.products
       .filter((item) => {
-        const query = searchTerm.trim().toLowerCase();
-        const matchesSearch =
-          !query ||
-          item.name.toLowerCase().includes(query) ||
-          getCategoryLabel(item.category || '').toLowerCase().includes(query);
-        const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchSearch = !q || item.name.toLowerCase().includes(q) || getCategoryLabel(item.category ?? '').toLowerCase().includes(q)
+        const matchStatus = statusFilter === 'all' || item.status === statusFilter
+        return matchSearch && matchStatus
       })
-      .sort((a, b) => {
-        const priority = { out: 0, critical: 1, low: 2, good: 3 };
-        return priority[a.status] - priority[b.status] || a.quantity - b.quantity;
-      });
-  }, [report.products, searchTerm, statusFilter]);
+      .sort((a, b) => STATUS[a.status].priority - STATUS[b.status].priority || a.quantity - b.quantity)
+  }, [report.products, search, statusFilter])
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-3xl bg-white shadow-sm">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-gray-500">جاري تجهيز صفحة المخزون...</p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <div className="relative h-12 w-12">
+          <div className="absolute inset-0 animate-spin rounded-full border-4 border-slate-100 border-t-amber-500" />
         </div>
+        <p className="text-sm font-medium text-slate-400">جاري تحميل بيانات المخزون...</p>
       </div>
-    );
+    )
+  }
+
+  const counts = {
+    all:      report.products.length,
+    out:      report.summary.outOfStock,
+    critical: report.summary.critical,
+    low:      report.summary.low,
+    good:     report.summary.good,
   }
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-[2rem] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_35%),linear-gradient(135deg,_#ffffff_0%,_#fffaf0_45%,_#f8fafc_100%)] p-6 shadow-sm">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-sm font-bold text-amber-700">إدارة المخزون</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-secondary">
-              صفحة بسيطة لكنها توضح كل حالة مهمة في المخزون
+    <div className="mx-auto max-w-7xl space-y-6 p-1" dir="rtl">
+
+      {/* ═══ Hero ═══ */}
+      <div className="relative overflow-hidden rounded-3xl border border-amber-200/40 bg-gradient-to-bl from-amber-50/80 via-white to-orange-50/30 p-7 shadow-sm">
+        <div className="pointer-events-none absolute left-0 top-0 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-300/15 blur-2xl" />
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📦</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-amber-600">إدارة المخزون</span>
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">
+              ما الذي يحتاج تدخلاً الآن؟
             </h1>
-            <p className="mt-3 text-sm leading-7 text-gray-600">
-              من هنا تقدر تعرف بسرعة ما الذي يحتاج تدخل، ما الذي وضعه مطمئن،
-              وأي منتج يجب توجيهه للإنتاج أو التعديل.
+            <p className="max-w-2xl text-sm leading-7 text-slate-500">
+              المنتجات مرتبة تلقائياً حسب الأولوية — نفد أولاً، ثم حرج، ثم منخفض.
+              أي منتج يظهر في الأعلى يعني أنه يحتاج قراراً اليوم.
             </p>
           </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/reports">Reports</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/charts">Charts</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/production">فتح الإنتاج</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/dashboard/products/new">إضافة منتج جديد</Link>
-            </Button>
+          <div className="flex flex-wrap gap-2.5">
+            <Button variant="outline" asChild size="sm"><Link href="/dashboard/reports">التقارير</Link></Button>
+            <Button variant="outline" asChild size="sm"><Link href="/dashboard/production">خطة الإنتاج</Link></Button>
+            <Button asChild size="sm"><Link href="/dashboard/products/new">+ إضافة منتج</Link></Button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <InsightCard title="يحتاج متابعة" value={report.summary.needAction.toLocaleString('ar-EG')} hint="منتجات أقل من المطلوب" tone="amber" />
-        <InsightCard title="غير متوفر" value={report.summary.outOfStock.toLocaleString('ar-EG')} hint="منتجات نفدت بالكامل" tone="red" />
-        <InsightCard title="إجمالي القطع" value={report.summary.totalUnits.toLocaleString('ar-EG')} hint="كل الكميات الحالية" tone="blue" />
-        <InsightCard title="قيمة المخزون" value={formatCurrency(report.summary.totalValue)} hint={`آخر تحديث: ${report.latestUpdateLabel}`} tone="emerald" />
-      </section>
+      {/* ═══ KPIs ═══ */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: 'يحتاج متابعة',  value: report.summary.needAction,                  sub: 'أقل من الحد الأدنى المطلوب',    bg: 'bg-amber-50   border-amber-200/60',   val: 'text-amber-700',   sub2: 'text-amber-600/70'   },
+          { label: 'نفد تماماً',    value: report.summary.outOfStock,                  sub: 'توقف عن التوفر للبيع',           bg: 'bg-red-50     border-red-200/60',     val: 'text-red-700',     sub2: 'text-red-600/70'     },
+          { label: 'إجمالي القطع',  value: report.summary.totalUnits,                  sub: 'مجموع الكميات الحالية',          bg: 'bg-blue-50    border-blue-200/60',    val: 'text-blue-700',    sub2: 'text-blue-600/70'    },
+          { label: 'قيمة المخزون', value: formatCurrency(report.summary.totalValue), sub: `آخر تحديث: ${report.latestUpdateLabel}`, bg: 'bg-emerald-50 border-emerald-200/60', val: 'text-emerald-700', sub2: 'text-emerald-600/70' },
+        ].map((k) => (
+          <div key={k.label} className={`rounded-2xl border p-5 shadow-sm ${k.bg}`}>
+            <p className={`text-sm font-bold ${k.val}`}>{k.label}</p>
+            <p className={`mt-2 text-3xl font-black ${k.val}`}>
+              {typeof k.value === 'number' ? k.value.toLocaleString('ar-EG') : k.value}
+            </p>
+            <p className={`mt-1 text-xs ${k.sub2}`}>{k.sub}</p>
+          </div>
+        ))}
+      </div>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="rounded-[2rem] border-gray-100 shadow-sm">
-          <CardHeader className="border-b bg-slate-50/70">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle>قائمة المنتجات</CardTitle>
-                <p className="mt-1 text-sm text-gray-500">
-                  ابحث أو فلتر الحالة للوصول السريع لأي صنف
-                </p>
+      {/* ═══ المحتوى الرئيسي ═══ */}
+      <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+
+        {/* قائمة المنتجات */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-sm">
+
+          {/* رأس + فلاتر */}
+          <div className="border-b border-slate-100 bg-slate-50/60 px-6 py-5">
+            <div className="flex flex-col gap-4">
+              {/* فلاتر الحالة كأزرار */}
+              <div className="flex flex-wrap gap-2">
+                {FILTER_TABS.map((tab) => {
+                  const active = statusFilter === tab.value
+                  const count = counts[tab.value]
+                  return (
+                    <button
+                      key={tab.value}
+                      onClick={() => setStatusFilter(tab.value)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                        active
+                          ? tab.color
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                      <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${active ? 'bg-white/20' : 'bg-white text-slate-500'}`}>
+                        {count}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
-              <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row">
+              {/* بحث */}
+              <div className="relative">
                 <Input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="ابحث بالاسم أو الفئة..."
-                  className="lg:w-72"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ابحث باسم المنتج أو الفئة..."
+                  className="pr-10"
                 />
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) => setStatusFilter(value as FilterStatus)}
-                >
-                  <SelectTrigger className="w-full lg:w-44">
-                    <SelectValue placeholder="فلتر الحالة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">كل الحالات</SelectItem>
-                    <SelectItem value="out">غير متوفر</SelectItem>
-                    <SelectItem value="critical">حرج</SelectItem>
-                    <SelectItem value="low">منخفض</SelectItem>
-                    <SelectItem value="good">مستقر</SelectItem>
-                  </SelectContent>
-                </Select>
+                <svg className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-            </div>
-          </CardHeader>
 
-          <CardContent className="p-0">
-            {filteredItems.length === 0 ? (
-              <div className="px-6 py-16 text-center text-sm text-gray-500">
-                لا توجد منتجات مطابقة لبحثك الحالي.
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredItems.map((item) => (
+              <p className="text-sm text-slate-400">
+                عرض <span className="font-bold text-slate-700">{filtered.length}</span> منتج
+                {statusFilter !== 'all' && <span> · مصفّى حسب: <span className="font-bold text-slate-600">{STATUS[statusFilter as InventoryStatus]?.label}</span></span>}
+              </p>
+            </div>
+          </div>
+
+          {/* الصفوف */}
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <span className="mb-3 text-4xl">🔍</span>
+              <p className="font-bold text-slate-500">لا توجد نتائج مطابقة</p>
+              <p className="mt-1 text-sm text-slate-400">جرب تغيير الفلتر أو تعديل كلمة البحث</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {filtered.map((item) => {
+                const cfg = STATUS[item.status]
+                const pct = Math.max(item.stockPercentage, item.quantity > 0 ? 3 : 0)
+                return (
                   <div
                     key={item.id}
-                    className="flex flex-col gap-4 px-6 py-5 transition hover:bg-slate-50 md:flex-row md:items-center md:justify-between"
+                    className={`flex flex-col gap-3 px-5 py-4 transition hover:bg-slate-50/70 md:flex-row md:items-center md:justify-between ${cfg.rowCls}`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <p className="truncate text-base font-bold text-gray-900">{item.name}</p>
-                        <Badge variant="outline" className={statusConfig[item.status].badge}>
-                          {statusConfig[item.status].label}
+                      {/* اسم + حالة */}
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${cfg.dotCls}`} />
+                        <p className="font-bold text-slate-900">{item.name}</p>
+                        <Badge variant="outline" className={`text-xs ${cfg.badgeCls}`}>
+                          {cfg.label}
                         </Badge>
-                        <span className="text-sm text-gray-500">
-                          {getCategoryLabel(item.category || '')}
-                        </span>
+                        <span className="text-xs text-slate-400">{getCategoryLabel(item.category ?? '')}</span>
                       </div>
 
-                      <div className="mt-3 grid gap-2 text-sm text-gray-600 sm:grid-cols-3">
-                        <p>المتوفر: {item.quantity.toLocaleString('ar-EG')}</p>
-                        <p>الحد الأدنى: {item.minStock.toLocaleString('ar-EG')}</p>
-                        <p>القيمة: {formatCurrency(item.value)}</p>
+                      {/* أرقام */}
+                      <div className="grid gap-x-4 gap-y-0.5 text-sm text-slate-500 sm:grid-cols-3">
+                        <span>المتوفر: <strong className="text-slate-700">{item.quantity.toLocaleString('ar-EG')}</strong></span>
+                        <span>الحد الأدنى: <strong className="text-slate-700">{item.minStock.toLocaleString('ar-EG')}</strong></span>
+                        <span>القيمة: <strong className="text-slate-700">{formatCurrency(item.value)}</strong></span>
                       </div>
 
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className={`h-full rounded-full bg-gradient-to-r ${statusConfig[item.status].bar}`}
-                          style={{ width: `${Math.max(item.stockPercentage, item.quantity > 0 ? 6 : 0)}%` }}
-                        />
+                      {/* شريط */}
+                      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                        <div className={`h-full rounded-full transition-all duration-700 ${cfg.barCls}`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    {/* أزرار */}
+                    <div className="flex shrink-0 items-center gap-2">
                       {item.gap > 0 && (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">
-                          +{item.gap} مطلوب
-                        </div>
+                        <span className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-black text-rose-700">
+                          +{item.gap} ناقص
+                        </span>
                       )}
                       <Button variant="outline" size="sm" asChild>
                         <Link href={`/dashboard/products/${item.id}/edit`}>تعديل</Link>
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
-        <div className="space-y-6">
-          <Card className="rounded-[2rem] border-amber-100 shadow-sm">
-            <CardHeader className="border-b bg-amber-50/70">
-              <CardTitle>ما الذي تبدأ به اليوم؟</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-6 text-sm text-gray-600">
-              <TipRow text="ابدأ أولًا بالمنتجات غير المتوفرة، لأنها توقف البيع مباشرة." />
-              <TipRow text="بعدها راجع المنتجات الحرجة وحدد ماذا يدخل الإنتاج اليوم." />
-              <TipRow text="أي منتج مستقر يمكن تأجيله، لكن سجّل التعديلات أولًا بأول." />
-            </CardContent>
-          </Card>
+        {/* اللوحة الجانبية */}
+        <div className="space-y-4">
 
-          <Card className="rounded-[2rem] border-emerald-100 shadow-sm">
-            <CardHeader className="border-b bg-emerald-50/70">
-              <CardTitle>أكثر المنتجات استقرارًا</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6">
-              {report.healthiest.slice(0, 4).map((item) => (
-                <div key={item.id}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <p className="font-semibold text-gray-900">{item.name}</p>
-                    <span className="text-sm font-bold text-emerald-700">
-                      {item.stockPercentage}%
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
-                      style={{ width: `${Math.max(item.stockPercentage, 10)}%` }}
-                    />
+          {/* دليل الأولويات */}
+          <div className="rounded-3xl border border-slate-200/60 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-black text-slate-800">كيف تقرأ الصفحة؟</h3>
+            <div className="space-y-2.5">
+              {[
+                { dot: 'bg-red-500 animate-pulse', title: 'نفد تماماً',    desc: 'هذا المنتج لا يوجد منه أي قطعة — يؤثر على البيع فوراً' },
+                { dot: 'bg-orange-500',             title: 'حرج',           desc: 'الكمية أقل بكثير من الحد الأدنى — يحتاج إنتاج عاجل' },
+                { dot: 'bg-amber-400',              title: 'منخفض',         desc: 'الكمية منخفضة — ضعه في خطة الإنتاج القريبة' },
+                { dot: 'bg-emerald-500',            title: 'مستقر',        desc: 'الكمية كافية — لا يحتاج تدخل الآن' },
+              ].map((row) => (
+                <div key={row.title} className="flex items-start gap-2.5 rounded-2xl bg-slate-50 px-3.5 py-3">
+                  <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${row.dot}`} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">{row.title}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-400">{row.desc}</p>
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* ملخص التوزيع */}
+          <div className="rounded-3xl border border-slate-200/60 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-black text-slate-800">ملخص التوزيع</h3>
+            <div className="space-y-2">
+              {[
+                { label: 'مستقر',     count: report.summary.good,         color: 'text-emerald-600 bg-emerald-50' },
+                { label: 'منخفض',    count: report.summary.low,           color: 'text-amber-600   bg-amber-50'   },
+                { label: 'حرج',       count: report.summary.critical,      color: 'text-orange-600  bg-orange-50'  },
+                { label: 'نفد',      count: report.summary.outOfStock,    color: 'text-red-600     bg-red-50'     },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center justify-between rounded-xl px-3 py-2">
+                  <span className="text-sm text-slate-600">{row.label}</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-black ${row.color}`}>
+                    {row.count}
+                  </span>
+                </div>
+              ))}
+              <div className="mt-2 border-t border-slate-100 pt-2 flex items-center justify-between px-3">
+                <span className="text-sm font-bold text-slate-700">الإجمالي</span>
+                <span className="text-sm font-black text-slate-900">{report.summary.totalProducts}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* أكثر المنتجات استقراراً */}
+          {report.healthiest.length > 0 && (
+            <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 font-black text-slate-800">أكثر المنتجات استقراراً</h3>
+              <div className="space-y-3">
+                {report.healthiest.slice(0, 4).map((item) => (
+                  <div key={item.id}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="truncate font-medium text-slate-700">{item.name}</span>
+                      <span className="font-black text-emerald-600">{item.stockPercentage}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-emerald-50">
+                      <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(item.stockPercentage, 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
     </div>
-  );
-}
-
-function InsightCard({
-  title,
-  value,
-  hint,
-  tone,
-}: {
-  title: string;
-  value: string;
-  hint: string;
-  tone: 'amber' | 'red' | 'blue' | 'emerald';
-}) {
-  const toneMap = {
-    amber: 'border-amber-100 bg-amber-50/70 text-amber-700',
-    red: 'border-red-100 bg-red-50/70 text-red-700',
-    blue: 'border-blue-100 bg-blue-50/70 text-blue-700',
-    emerald: 'border-emerald-100 bg-emerald-50/70 text-emerald-700',
-  } as const;
-
-  return (
-    <div className={`rounded-[1.75rem] border p-5 shadow-sm ${toneMap[tone]}`}>
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-3 text-3xl font-black">{value}</p>
-      <p className="mt-2 text-xs opacity-85">{hint}</p>
-    </div>
-  );
-}
-
-function TipRow({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
-      {text}
-    </div>
-  );
+  )
 }
