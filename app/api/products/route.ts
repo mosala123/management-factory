@@ -7,15 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-// زيادة حجم الطلب مؤقتاً (حل مؤقت)
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
-
+ export const maxDuration = 30
 function generateSlugFromName(name: string): string {
   return name
     .toLowerCase()

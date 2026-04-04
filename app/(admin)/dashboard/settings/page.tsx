@@ -6,7 +6,7 @@ import { useEffect, useMemo } from 'react'
 import { useProducts } from '@/hooks/useProducts'
 import { buildInventoryReport, type ProductLike } from '@/lib/reporting'
 import { formatCurrency } from '@/lib/utils'
-
+export const dynamic = 'force-dynamic'
 const SECTIONS = [
   { href: '/dashboard/inventory',  title: 'المخزون',         desc: 'راجع حالة الكميات — ما نفد وما يحتاج تدخل سريع.',     icon: '📦', tone: 'amber'   },
   { href: '/dashboard/production', title: 'الإنتاج',         desc: 'تابع خطة التشغيل اليومية والأصناف المقترحة للتصنيع.', icon: '🏭', tone: 'violet'  },

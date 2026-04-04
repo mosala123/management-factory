@@ -7,7 +7,7 @@ import { useProducts } from '@/hooks/useProducts'
 import { buildInventoryReport, type ProductLike } from '@/lib/reporting'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-
+export const dynamic = 'force-dynamic'
 export default function ChartsPage() {
   const { products, isLoading, fetchProducts } = useProducts()
   useEffect(() => { fetchProducts(1, 1000) }, [fetchProducts])

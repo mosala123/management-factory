@@ -8,7 +8,7 @@ import { formatCurrency, getCategoryLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
+export const dynamic = 'force-dynamic'
 function SectionHeader({
   title,
   subtitle,

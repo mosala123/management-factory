@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { buildInventoryReport, type ProductLike } from '@/lib/reporting';
 import { getCategoryLabel } from '@/lib/utils';
-
+export const dynamic = 'force-dynamic'
 type Priority = 'critical' | 'high' | 'medium';
 
 type ProductionItem = {

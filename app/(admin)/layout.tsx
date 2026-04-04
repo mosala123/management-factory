@@ -19,7 +19,7 @@ import {
   resolveUserRole,
   type UserRole,
 } from '@/lib/auth-role'
-
+export const dynamic = 'force-dynamic'
 // ─── أنواع ────────────────────────────────────────────────────────────────────
 type NavItem = {
   href: string
